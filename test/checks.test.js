@@ -152,26 +152,15 @@ jobs:
 
 test('the caller is told whether a branch list is needed before it fetches', () => {
   const withoutFilters = analyze({
-    workflows: [wf('on: push
-jobs:
-  a:
-    runs-on: ubuntu-latest
-    steps: []
-')],
+    workflows: [wf('on: push\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps: []\n')],
     view: viewOf({ 'index.js': '' }),
     branches: null,
   });
   assert.equal(withoutFilters.needs.branches, false);
 
+  const filtered = ['on:', '  push:', '    branches: [main]', 'jobs:', '  a:', '    runs-on: ubuntu-latest', '    steps: []', ''].join('\n');
   const withFilters = analyze({
-    workflows: [wf('on:
-  push:
-    branches: [main]
-jobs:
-  a:
-    runs-on: ubuntu-latest
-    steps: []
-')],
+    workflows: [wf(filtered)],
     view: viewOf({ 'index.js': '' }),
     branches: null,
   });
