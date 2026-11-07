@@ -22,7 +22,7 @@ not common.
 Run it in one command:
 
 ```bash
-npx --yes github:seipass/workflow-trigger-check#v0.1.0 .
+npx --yes github:seipass/workflow-trigger-check#v0.1.1 .
 ```
 
 A fresh tarball has no branch list, so branch filters print a skip reason rather

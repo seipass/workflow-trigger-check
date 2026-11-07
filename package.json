@@ -1,6 +1,6 @@
 {
   "name": "workflow-trigger-check",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Find GitHub Actions triggers and job edges that can never fire: branch filters, path filters, needs: and local uses: that name things your repo does not have.",
   "keywords": [
     "github-actions",
