@@ -25,11 +25,22 @@ export function runChecks({ workflows, view, branches }) {
     for (let i = 1; i < parts.length; i += 1) directories.add(`/${parts.slice(0, i).join('/')}`);
   }
 
+  const truncated = Boolean(view.truncated);
+  if (truncated) {
+    for (const workflow of workflows) {
+      void workflow;
+      break;
+    }
+    skipped.push({
+      check: 'path-filter',
+      reason: 'the supplied file list is marked truncated, so path and local-uses checks were not run',
+    });
+  }
   for (const workflow of workflows) {
     checkBranches(workflow, branches, findings, skipped);
-    checkPaths(workflow, files, directories, findings);
+    if (!truncated) checkPaths(workflow, files, directories, findings);
     checkNeeds(workflow, findings);
-    checkLocalUses(workflow, files, findings);
+    if (!truncated) checkLocalUses(workflow, files, findings);
   }
 
   return { findings, skipped };
@@ -54,7 +65,7 @@ function checkBranches(workflow, branches, findings, skipped) {
       file: workflow.path,
       line: entry.line,
       subject: entry.value,
-      detail: `${entry.trigger}.${entry.key} names branch "${entry.value}", which does not exist in this repository`,
+      detail: `${entry.trigger}.${entry.key} names branch "${entry.value}", which is not present in this checkout`,
     });
   }
 }

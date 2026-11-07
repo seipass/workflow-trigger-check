@@ -8,7 +8,7 @@ import { parseWorkflow } from './workflows.js';
 import { runChecks } from './checks.js';
 import { YamlError } from './yaml.js';
 
-export const VERSION = '0.1.1';
+export const VERSION = '0.1.2';
 
 /**
  * @param {{

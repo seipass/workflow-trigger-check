@@ -39,6 +39,16 @@ export function renderText(result) {
 export function verdict(result) {
   const count = result.findings.length;
   if (count === 0) {
+    // A clean sentence with a skipped check is the failure we banned: the
+    // headline check did not run, so "nothing is missing" would overclaim.
+    const skipped = [...new Set(result.skipped.map((item) => item.check))];
+    if (skipped.length > 0) {
+      return (
+        "Nothing dangling in what we could check, but these checks did not run: " +
+        skipped.join(', ') +
+        ". We don't guess - a missing branch list is not a missing branch."
+      );
+    }
     return 'No trigger in this repo names something that is missing. That is not proof your CI runs - only that the names resolve.';
   }
   const plural = count === 1 ? 'name names' : 'names name';

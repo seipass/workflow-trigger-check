@@ -129,9 +129,12 @@ export function main(argv = process.argv.slice(2)) {
   }
 
   let filePaths = walk(root).sort();
+  let treeTruncated = false;
   if (options.tree) {
     try {
-      filePaths = readTreeFile(options.tree);
+      const tree = readTreeFile(options.tree);
+      filePaths = tree.paths;
+      treeTruncated = tree.truncated;
     } catch (error) {
       process.stderr.write(`error: cannot read --tree ${options.tree}: ${error.message}` + String.fromCharCode(10));
       return 1;
@@ -149,6 +152,7 @@ export function main(argv = process.argv.slice(2)) {
     },
   };
 
+  view.truncated = treeTruncated;
   const branches = options.branches ? readBranches(options.branches) : localBranches(root);
   const result = analyze({ workflows, view, branches });
 
@@ -180,42 +184,73 @@ function readTreeFile(file) {
     const data = JSON.parse(text);
     const paths = Array.isArray(data) ? data : data.paths ?? data.tree ?? data.files;
     if (!Array.isArray(paths)) throw new Error('no paths array');
-    return paths.map((path) => String(path).replace(/^\//, '')).filter(Boolean).sort();
+    return {
+      paths: paths.map((entry) => String(entry).replace(/^\//, '')).filter(Boolean).sort(),
+      // A caller that hit its cap says so; a partial list makes present files
+      // look missing, so the checks that use it are skipped rather than guessed.
+      truncated: Boolean(!Array.isArray(data) && (data.truncated === true || data.complete === false)),
+    };
   }
-  const separator = new RegExp(String.fromCharCode(13) + '?' + String.fromCharCode(10));
-  return text.split(separator).map((line) => line.trim().replace(/^\//, '')).filter(Boolean).sort();
+  return {
+    paths: text
+      .split(/\r?\n/)
+      .map((line) => line.trim().replace(/^\//, ''))
+      .filter(Boolean)
+      .sort(),
+    truncated: false,
+  };
 }
 
 function readBranches(file) {
   const text = readFileSync(file, 'utf8').trim();
-  // "null" / empty means "the caller could not obtain a complete list": skip the
-  // check rather than call real branches missing.
   if (text === '' || text === 'null') return null;
   if (text.startsWith('[') || text.startsWith('{')) {
     const parsed = JSON.parse(text);
+    // A caller that hit its cap says so; an incomplete list makes real
+    // branches look absent, so it counts as no list at all.
+    if (parsed && !Array.isArray(parsed) && (parsed.truncated === true || parsed.complete === false)) return null;
     const list = Array.isArray(parsed) ? parsed : parsed.branches ?? parsed.names;
     return Array.isArray(list) && list.length > 0 ? list : null;
   }
-  return text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+  const names = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  return names.length > 0 ? names : null;
 }
 
-/** Best-effort local branch list; null when we cannot know (then we skip). */
+/**
+ * Branch list from a local clone, or null when the clone cannot prove one.
+ * A shallow or single-branch clone knows only what it fetched; using it would
+ * call real remote branches missing, the strongest false accusation here.
+ */
 function localBranches(root) {
   try {
-    const output = execFileSync('git', ['-C', root, 'for-each-ref', '--format=%(refname:short)', 'refs/heads', 'refs/remotes'], {
+    const shallow = execFileSync('git', ['-C', root, 'rev-parse', '--is-shallow-repository'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    if (shallow === 'true') return null;
+
+    let refspec = '';
+    try {
+      refspec = execFileSync('git', ['-C', root, 'config', '--get', 'remote.origin.fetch'], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }).trim();
+    } catch {
+      refspec = '';
+    }
+    if (refspec !== '' && refspec !== '+refs/heads/*:refs/remotes/origin/*') return null;
+
+    const remotes = execFileSync('git', ['-C', root, 'for-each-ref', '--format=%(refname:short)', 'refs/remotes'], {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
     });
     const names = new Set();
-    for (const raw of output.split(/\r?\n/)) {
+    for (const raw of remotes.split(/\r?\n/)) {
       const name = raw.trim().replace(/^origin\//, '');
       if (name === '' || name === 'HEAD') continue;
       names.add(name);
     }
-    return names.size > 0 ? [...names] : null;
+    return names.size >= 2 ? [...names] : null;
   } catch {
     return null;
   }

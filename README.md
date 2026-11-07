@@ -3,8 +3,9 @@
 A workflow filter that names a branch, a path, a job or a local action the
 repository does not have is valid YAML, passes `actionlint`, and simply never
 runs. This checks those names and nothing else: no expressions, no `if:`, no
-permissions, no version currency. Every finding is "this name does not exist in
-this repository", which is a fact you can refute with one click.
+permissions, no version currency. Every finding is "this name is not present in
+what we looked at" - the checkout, or the branch list you supplied - and it names
+what we looked at, so you can refute it in one click.
 
 Measured on 21 public repositories, with this tool's own parser:
 
@@ -22,7 +23,7 @@ not common.
 Run it in one command:
 
 ```bash
-npx --yes github:seipass/workflow-trigger-check#v0.1.1 .
+npx --yes github:seipass/workflow-trigger-check#v0.1.2 .
 ```
 
 A fresh tarball has no branch list, so branch filters print a skip reason rather
@@ -45,7 +46,7 @@ branch-filter .github/workflows/main.yml:7
 Falsify it:
 
 ```bash
-gh api 'repos/trpc/trpc/branches?per_page=100' --paginate --jq '.[].name' | grep -cx next   # 0: the branch is not there
+git ls-remote --heads https://github.com/trpc/trpc | grep -c 'refs/heads/next'   # 0: the branch is not there
 ```
 
 ## Run it from a clone
@@ -65,7 +66,7 @@ cannot prove a branch is missing, so the check prints a reason and does nothing;
 supply one explicitly to enable it:
 
 ```bash
-gh api 'repos/OWNER/REPO/branches?per_page=100&page=1' --jq '.[].name' > branches.txt
+git ls-remote --heads https://github.com/OWNER/REPO | sed 's#.*refs/heads/##' > branches.txt
 node bin/workflow-trigger-check.js . --branches branches.txt
 ```
 
@@ -115,7 +116,7 @@ static prefix exists are never reported — see the limits below.
 ```jsonc
 {
   "ok": true,
-  "version": "0.1.0",
+  "version": "0.1.2",
   "findings": [{ "check": "branch-filter", "file": ".github/workflows/main.yml", "line": 7, "subject": "next", "detail": "..." }],
   "skipped": [{ "check": "branch-filter", "reason": "... no branch list available ..." }],
   "summary": { "workflows": 10, "findings": 3, "by_check": { "branch-filter": 3 }, "branches_known": 191 },
