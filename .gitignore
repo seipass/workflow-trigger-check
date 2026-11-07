@@ -1,0 +1,4 @@
+node_modules/
+*.log
+tools/cache/
+tools/results.json

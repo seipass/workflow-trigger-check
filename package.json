@@ -1,0 +1,40 @@
+{
+  "name": "workflow-trigger-check",
+  "version": "0.1.0",
+  "description": "Find GitHub Actions triggers and job edges that can never fire: branch filters, path filters, needs: and local uses: that name things your repo does not have.",
+  "keywords": [
+    "github-actions",
+    "workflows",
+    "lint",
+    "cli",
+    "devops"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "workflow-trigger-check": "bin/workflow-trigger-check.js"
+  },
+  "exports": {
+    ".": "./core/analyze.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "bin",
+    "cli",
+    "core",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seipass/workflow-trigger-check.git"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
