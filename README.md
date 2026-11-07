@@ -61,14 +61,33 @@ With no flags it reads `.github/workflows/*.yml`, every branch name it can find
 in a local clone, and the repository's file list. Exit code is `0` when nothing
 dangles and `2` when something does.
 
-Branch checks need a complete branch list. From a shallow or local-only clone we
-cannot prove a branch is missing, so the check prints a reason and does nothing;
-supply one explicitly to enable it:
+Branch checks need branch evidence. A shallow or `--single-branch` clone does not
+contain every remote branch, so this check cannot tell "the branch is missing" from
+"the clone didn't fetch it" - it skips and says so, and an unmarked list is trusted
+as complete. Supply a list explicitly to enable it:
 
 ```bash
 git ls-remote --heads https://github.com/OWNER/REPO | sed 's#.*refs/heads/##' > branches.txt
 node bin/workflow-trigger-check.js . --branches branches.txt
 ```
+
+Both flags accept a completeness marker, so a caller that fetched only part of the
+repository can say so instead of being trusted:
+
+- `--branches` - one name per line, or JSON `{"branches":[...]}`. Add
+  `"truncated": true` (or `"complete": false`) when the list may be incomplete;
+  the check then skips rather than accusing. `null` means the same.
+- `--tree` - the repository's **complete** file list (e.g. `git/trees?recursive=1`),
+  JSON `{"paths":[...]}` or one per line. Add `"truncated": true` for a partial
+  fetch: path and local-uses checks then skip. An unmarked list is trusted as
+  complete.
+
+| check | needs | without it |
+|---|---|---|
+| `branch-filter` | branch evidence (`--branches`, or a complete clone) | skipped, with a reason |
+| `path-filter` | complete file list | skipped if the tree is marked partial |
+| `needs-target` | the workflow file only | always runs |
+| `local-uses` | complete file list | skipped if the tree is marked partial |
 
 ## What each check asks
 

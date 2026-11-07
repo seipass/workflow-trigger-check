@@ -16,12 +16,16 @@ Usage
   path                    repository to inspect (default: current directory)
 
 Options
-  --branches <file>       branch list to check against (one per line, or JSON
-                          array). Without it, branch filters are skipped rather
-                          than guessed. Default: read refs from a local .git.
-  --tree <file>           authoritative file list for the checkout (JSON
-                          {paths:[...]} or one path per line). Use it when the
-                          checkout holds only part of the repository.
+  --branches <file>       branch evidence: one name per line, or JSON
+                          {"branches":[...]}. Mark an incomplete list
+                          {"truncated":true} (or "complete":false) and the check
+                          skips instead of guessing. Without it, refs from a
+                          complete local clone are used; a shallow or
+                          single-branch clone yields no list, so the check skips.
+  --tree <file>           the repository's COMPLETE file list (JSON {paths:[...]}
+                          or one path per line, e.g. git/trees?recursive=1). If it
+                          is partial, mark it {"truncated":true}: path and
+                          local-uses checks then skip. Unmarked = trusted.
   --json                  machine-readable output
   --fail-on <checks>      comma-separated check names that fail the run
                           (default: all)
